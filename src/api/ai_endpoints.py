@@ -45,13 +45,14 @@ class DocumentFetchRequest(BaseModel):
 
 
 @router.post("/chat")
-async def ai_chat(request: AIChatRequest, orchestrator: Orchestrator):
+async def ai_chat(request: AIChatRequest):
     """
     Intelligent chat with AI grant analyst
 
     Natural language understanding with context-aware responses.
     Can answer questions, provide advice, summarize, and more.
     """
+    from .app import orchestrator
 
     try:
         # First, search for relevant grants
@@ -84,12 +85,13 @@ async def ai_chat(request: AIChatRequest, orchestrator: Orchestrator):
 
 
 @router.post("/summarize")
-async def summarize_grant(grant_id: str, orchestrator: Orchestrator):
+async def summarize_grant(grant_id: str):
     """
     Get AI-generated summary of a grant
 
     Returns comprehensive, actionable summary
     """
+    from .app import orchestrator
 
     try:
         # Get grant details from orchestrator
@@ -116,12 +118,13 @@ async def summarize_grant(grant_id: str, orchestrator: Orchestrator):
 
 
 @router.post("/compare")
-async def compare_grants(request: AIAnalyzeRequest, orchestrator: Orchestrator):
+async def compare_grants(request: AIAnalyzeRequest):
     """
     Compare multiple grants with AI analysis
 
     Provides strategic recommendations
     """
+    from .app import orchestrator
 
     try:
         # Fetch grants
@@ -172,12 +175,13 @@ async def fetch_and_analyze_document(request: DocumentFetchRequest):
 
 
 @router.post("/write-proposal")
-async def help_write_proposal(request: AIWriteRequest, orchestrator: Orchestrator):
+async def help_write_proposal(request: AIWriteRequest):
     """
     Get AI assistance writing grant proposal
 
     Generates compelling proposal sections aligned with funder priorities
     """
+    from .app import orchestrator
 
     try:
         # Get grant details
