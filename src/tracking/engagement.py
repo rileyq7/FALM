@@ -1,22 +1,43 @@
 """
-Engagement Tracking
+Engagement Tracking with SQLite persistence
 
-Tracks user interactions to identify hot leads
+Tracks user interactions to identify hot leads.
+Now includes persistent storage that survives restarts!
 """
 
 from typing import Dict, List, Optional
 from datetime import datetime
 import logging
+from .persistent_tracking import PersistentEngagementTracker
 
 logger = logging.getLogger(__name__)
 
 
-class EngagementTracker:
-    """Tracks user engagement with grants"""
+# Use persistent storage as default
+class EngagementTracker(PersistentEngagementTracker):
+    """
+    Engagement tracker with SQLite persistence
+
+    Inherits from PersistentEngagementTracker to provide:
+    - Persistent event storage
+    - Hot lead detection across restarts
+    - SQL-based analytics
+    - Event history tracking
+    """
+
+    def __init__(self, db_path: str = "data/falm_engagement.db"):
+        super().__init__(db_path)
+        logger.info(f"[Engagement] Initialized with persistent storage: {db_path}")
+
+
+# Legacy in-memory version (for testing/fallback)
+class InMemoryEngagementTracker:
+    """In-memory engagement tracker (loses data on restart)"""
 
     def __init__(self):
         self.sessions: Dict[str, List[Dict]] = {}
         self.hot_leads: List[Dict] = []
+        logger.warning("[Engagement] Using in-memory storage - data will be lost on restart!")
 
     async def track_query(self, user_id: str, query: str, results_count: int):
         """Track a search query"""

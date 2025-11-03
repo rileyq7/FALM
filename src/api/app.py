@@ -13,7 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from ..core.orchestrator import Orchestrator
-from ..nlms import InnovateUKNLM, HorizonEuropeNLM, NIHRNLM, UKRINLM, SMEContextNLM
+from ..nlms import InnovateUKNLM, HorizonEuropeNLM, NIHRNLM, UKRINLM
+from ..nlms.enhanced_sme_nlm import EnhancedSMEContextNLM
 from ..tracking.engagement import EngagementTracker
 from ..tracking.dashboard import DashboardManager
 from ..utils.database import db
@@ -51,8 +52,8 @@ async def lifespan(app: FastAPI):
         await nlm.initialize()
         await orchestrator.register_nlm(nlm)
 
-    # Register SME context
-    sme_nlm = SMEContextNLM()
+    # Register Enhanced SME context (rule-based expert system)
+    sme_nlm = EnhancedSMEContextNLM()
     await sme_nlm.initialize()
     await orchestrator.register_sme_context(sme_nlm)
 

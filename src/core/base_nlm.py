@@ -72,6 +72,10 @@ class BaseNLM(ABC):
     4. Can be queried independently or via orchestrator
     """
 
+    # Shared embedder pool (class-level) for memory efficiency
+    _embedder_pool: Dict[str, SentenceTransformer] = {}
+    _embedder_lock = asyncio.Lock()
+
     def __init__(self, config: NLMConfig):
         self.config = config
         self.nlm_id = config.nlm_id
@@ -104,15 +108,23 @@ class BaseNLM(ABC):
         logger.info(f"Initialized NLM: {self.nlm_id} ({self.name})")
 
     async def initialize(self):
-        """Initialize the NLM"""
+        """Initialize the NLM with shared embedder pool"""
         logger.info(f"[{self.nlm_id}] Initializing...")
 
         # Initialize vector database
         await self._initialize_vector_db()
 
-        # Initialize embedder
-        self.embedder = SentenceTransformer(self.config.embedding_model)
-        logger.info(f"[{self.nlm_id}] Loaded embedding model: {self.config.embedding_model}")
+        # Get or create shared embedder (memory efficient!)
+        model_name = self.config.embedding_model
+
+        async with BaseNLM._embedder_lock:
+            if model_name not in BaseNLM._embedder_pool:
+                logger.info(f"[{self.nlm_id}] Loading embedding model: {model_name}")
+                BaseNLM._embedder_pool[model_name] = SentenceTransformer(model_name)
+            else:
+                logger.info(f"[{self.nlm_id}] Using cached embedder: {model_name}")
+
+        self.embedder = BaseNLM._embedder_pool[model_name]
 
         # Custom initialization
         await self.on_initialize()
@@ -301,6 +313,31 @@ class BaseNLM(ABC):
     # DATA OPERATIONS
     # ========================================================================
 
+    def _prepare_metadata(self, grant_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Prepare metadata for ChromaDB (only accepts simple types)
+
+        Args:
+            grant_data: Grant information
+
+        Returns:
+            Metadata dictionary with simple types
+        """
+        import json
+
+        metadata = {}
+        for key, value in grant_data.items():
+            if value is None:
+                continue
+            elif isinstance(value, (str, int, float, bool)):
+                metadata[key] = value
+            elif isinstance(value, (list, dict)):
+                metadata[key] = json.dumps(value)
+            else:
+                metadata[key] = str(value)
+
+        return metadata
+
     async def index_grant(self, grant_data: Dict[str, Any]) -> str:
         """
         Index a grant in this NLM's database
@@ -311,8 +348,6 @@ class BaseNLM(ABC):
         Returns:
             grant_id
         """
-        import json
-
         grant_id = grant_data.get("grant_id", f"{self.nlm_id}_{datetime.utcnow().timestamp()}")
 
         # Ensure domain/silo metadata
@@ -325,17 +360,8 @@ class BaseNLM(ABC):
         content = await self.generate_search_content(grant_data)
         embeddings = self.embedder.encode(content).tolist()
 
-        # Prepare metadata (ChromaDB only accepts simple types)
-        metadata = {}
-        for key, value in grant_data.items():
-            if value is None:
-                continue
-            elif isinstance(value, (str, int, float, bool)):
-                metadata[key] = value
-            elif isinstance(value, (list, dict)):
-                metadata[key] = json.dumps(value)
-            else:
-                metadata[key] = str(value)
+        # Prepare metadata
+        metadata = self._prepare_metadata(grant_data)
 
         # Add to vector DB
         self.collection.add(
@@ -352,9 +378,64 @@ class BaseNLM(ABC):
 
         return grant_id
 
+    async def index_grants_batch(self, grants: List[Dict[str, Any]], batch_size: int = 32) -> List[str]:
+        """
+        Bulk index grants - much faster than indexing one-by-one
+
+        Args:
+            grants: List of grant data dictionaries
+            batch_size: Batch size for encoding (default: 32)
+
+        Returns:
+            List of grant IDs
+        """
+        if not grants:
+            return []
+
+        logger.info(f"[{self.nlm_id}] Starting batch indexing of {len(grants)} grants...")
+
+        # Ensure domain/silo metadata for all grants
+        indexed_at = datetime.utcnow().isoformat()
+        for grant in grants:
+            grant["nlm_id"] = self.nlm_id
+            grant["domain"] = self.domain
+            grant["silo"] = self.silo
+            grant["indexed_at"] = indexed_at
+
+        # Generate all content
+        contents = [await self.generate_search_content(g) for g in grants]
+
+        # Batch encode (much faster than one-by-one)
+        embeddings = self.embedder.encode(contents, batch_size=batch_size, show_progress_bar=True)
+
+        # Prepare IDs and metadata
+        ids = [g.get("grant_id", f"{self.nlm_id}_{i}_{datetime.utcnow().timestamp()}")
+               for i, g in enumerate(grants)]
+        metadatas = [self._prepare_metadata(g) for g in grants]
+
+        # Single ChromaDB call for all grants
+        self.collection.add(
+            ids=ids,
+            embeddings=embeddings.tolist(),
+            documents=contents,
+            metadatas=metadatas
+        )
+
+        # Update stats
+        self.stats["grants_indexed"] += len(grants)
+        self.stats["last_updated"] = indexed_at
+
+        logger.info(f"[{self.nlm_id}] Bulk indexed {len(grants)} grants successfully")
+
+        return ids
+
     async def search(self, query: str, max_results: int = 10, filters: Dict = None) -> List[Dict]:
         """
-        Search this NLM's database
+        Hybrid search: semantic + keyword matching
+
+        Combines:
+        - Semantic similarity (70% weight)
+        - Keyword overlap (30% weight)
 
         Args:
             query: Search query
@@ -362,24 +443,25 @@ class BaseNLM(ABC):
             filters: Optional filters
 
         Returns:
-            List of matching grants
+            List of matching grants with hybrid relevance scores
         """
         import json
 
         # Generate query embedding
         query_embedding = self.embedder.encode(query).tolist()
+        query_terms = set(query.lower().split())
 
-        # Search
+        # Get more results for re-ranking
         results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=max_results,
+            n_results=max_results * 3,  # Get 3x for re-ranking
             where=filters
         )
 
-        # Parse results
+        # Parse and score results
         grants = []
         if results['metadatas'] and results['metadatas'][0]:
-            for metadata in results['metadatas'][0]:
+            for i, metadata in enumerate(results['metadatas'][0]):
                 grant = {}
                 for key, value in metadata.items():
                     # Deserialize JSON strings
@@ -390,11 +472,44 @@ class BaseNLM(ABC):
                             grant[key] = value
                     else:
                         grant[key] = value
+
+                # Calculate keyword overlap score
+                grant_text = f"{grant.get('title', '')} {grant.get('description', '')}".lower()
+                grant_terms = set(grant_text.split())
+                keyword_overlap = len(query_terms.intersection(grant_terms))
+                keyword_score = keyword_overlap / max(len(query_terms), 1)
+
+                # Semantic distance from ChromaDB (lower = better)
+                semantic_distance = results['distances'][0][i]
+                semantic_score = 1 - semantic_distance  # Convert to similarity
+
+                # Combined score (weighted)
+                combined_score = (
+                    0.7 * semantic_score +
+                    0.3 * keyword_score
+                )
+
+                grant['relevance_score'] = float(combined_score)
+                grant['semantic_score'] = float(semantic_score)
+                grant['keyword_score'] = float(keyword_score)
+
                 grants.append(grant)
 
-        logger.info(f"[{self.nlm_id}] Search '{query}': {len(grants)} results")
+        # Sort by combined score
+        grants.sort(key=lambda g: g['relevance_score'], reverse=True)
 
-        return grants
+        # Return top N
+        top_grants = grants[:max_results]
+
+        if top_grants:
+            avg_semantic = sum(g['semantic_score'] for g in top_grants) / len(top_grants)
+            avg_keyword = sum(g['keyword_score'] for g in top_grants) / len(top_grants)
+            logger.info(f"[{self.nlm_id}] Hybrid search '{query}': {len(top_grants)} results "
+                       f"(avg semantic: {avg_semantic:.3f}, avg keyword: {avg_keyword:.3f})")
+        else:
+            logger.info(f"[{self.nlm_id}] Hybrid search '{query}': 0 results")
+
+        return top_grants
 
     async def get_all_grants(self, limit: int = 100) -> List[Dict]:
         """Get all grants from this NLM's database"""

@@ -1,21 +1,42 @@
 """
-Dashboard Manager
+Dashboard Manager with SQLite persistence
 
-Manages user dashboards with saved grants
+Manages user dashboards with saved grants.
+Now includes persistent storage that survives restarts!
 """
 
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import logging
+from .persistent_tracking import PersistentDashboardManager
 
 logger = logging.getLogger(__name__)
 
 
-class DashboardManager:
-    """Manages user dashboards"""
+# Use persistent storage as default
+class DashboardManager(PersistentDashboardManager):
+    """
+    Dashboard manager with SQLite persistence
+
+    Inherits from PersistentDashboardManager to provide:
+    - Persistent storage across restarts
+    - SQL-based querying for deadlines
+    - Notes and status tracking
+    - Statistics dashboard
+    """
+
+    def __init__(self, db_path: str = "data/falm_dashboard.db"):
+        super().__init__(db_path)
+        logger.info(f"[Dashboard] Initialized with persistent storage: {db_path}")
+
+
+# Legacy in-memory version (for testing/fallback)
+class InMemoryDashboardManager:
+    """In-memory dashboard manager (loses data on restart)"""
 
     def __init__(self):
         self.dashboards: Dict[str, List[Dict]] = {}
+        logger.warning("[Dashboard] Using in-memory storage - data will be lost on restart!")
 
     async def add_grant(self, user_id: str, grant: Dict):
         """Add grant to user's dashboard"""
@@ -51,3 +72,14 @@ class DashboardManager:
         ]
 
         return urgent
+
+    async def get_stats(self) -> Dict:
+        """Get dashboard statistics"""
+        total_users = len(self.dashboards)
+        total_grants = sum(len(grants) for grants in self.dashboards.values())
+
+        return {
+            "total_users": total_users,
+            "total_saved_grants": total_grants,
+            "avg_grants_per_user": total_grants / max(total_users, 1)
+        }
