@@ -265,12 +265,13 @@ Make it specific, evidence-based, and aligned with funder priorities.
         """Call OpenAI GPT API"""
 
         response = await self.openai_client.chat.completions.create(
-            model="gpt-4-turbo-preview",
+            model="gpt-4o",  # Latest and best model for analysis
             messages=[
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=2000
+            max_tokens=2000,
+            temperature=0.7  # Balanced between creative and accurate
         )
 
         return response.choices[0].message.content
