@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  falm-api:
+    build: .
+    container_name: falm-api
+    ports:
+      - "8000:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - MONGODB_URL=mongodb://mongo:27017
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    networks:
+      - falm-network
+
+  mongo:
+    image: mongo:7
+    container_name: falm-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+    networks:
+      - falm-network
+
+volumes:
+  mongo-data:
+
+networks:
+  falm-network:
+    driver: bridge

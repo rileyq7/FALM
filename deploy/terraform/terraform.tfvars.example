@@ -1,0 +1,28 @@
+# FALM Terraform Variables
+# Copy to terraform.tfvars and fill in your values
+
+aws_region = "us-east-1"
+
+# ECS Configuration
+task_cpu       = "1024"  # 1 vCPU
+task_memory    = "2048"  # 2GB
+desired_count  = 2
+min_capacity   = 1
+max_capacity   = 10
+
+# ChromaDB Cloud
+chromadb_mode      = "cloud"
+chromadb_cloud_url = "your-instance.chromadb.io"
+chromadb_api_key   = "chroma_xxx..."
+
+# Anthropic
+anthropic_api_key = "sk-ant-..."
+
+# MongoDB Atlas
+mongodb_url = "mongodb+srv://user:pass@cluster.mongodb.net/falm"
+
+# S3
+s3_bucket_name = "falm-grants-your-name"
+
+# SSL Certificate (optional - get from ACM)
+acm_certificate_arn = "arn:aws:acm:us-east-1:123456789:certificate/..."

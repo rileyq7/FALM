@@ -1,0 +1,49 @@
+# FALM Production Requirements
+# Python 3.11+ required
+
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+
+# LLM APIs
+anthropic==0.40.0
+openai==1.3.0
+
+# Vector Database & Embeddings
+chromadb==0.4.18
+sentence-transformers==2.2.2
+
+# Database
+pymongo==4.6.0
+motor==3.3.2
+
+# PDF Processing
+PyPDF2==3.0.1
+pdfplumber==0.10.3
+
+# Web Scraping
+beautifulsoup4==4.12.2
+requests==2.31.0
+aiohttp==3.9.1
+lxml==4.9.3
+
+# Scheduling
+apscheduler==3.10.4
+
+# Data Processing
+pandas==2.1.4
+numpy==1.26.2
+
+# Environment Management
+python-dotenv==1.0.0
+
+# AWS
+boto3==1.34.0
+
+# Optional: Local LLMs (uncomment if needed)
+# ollama==0.1.0
+# transformers==4.35.2
+# torch==2.1.0
