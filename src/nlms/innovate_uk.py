@@ -96,7 +96,10 @@ class InnovateUKNLM(BaseNLM):
         # Add eligibility keywords
         eligibility = grant_data.get('eligibility', {})
         if eligibility:
-            parts.append(' '.join(str(v) for v in eligibility.values() if v))
+            if isinstance(eligibility, dict):
+                parts.append(' '.join(str(v) for v in eligibility.values() if v))
+            else:
+                parts.append(str(eligibility))
 
         return ' '.join(parts)
 

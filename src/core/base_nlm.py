@@ -141,23 +141,21 @@ class BaseNLM(ABC):
 
         if chroma_mode == "cloud":
             # ChromaDB Cloud configuration
-            cloud_url = os.getenv("CHROMADB_CLOUD_URL")
+            cloud_url = os.getenv("CHROMADB_CLOUD_URL", "api.trychroma.com")
             api_key = os.getenv("CHROMADB_API_KEY")
-            tenant = os.getenv("CHROMADB_TENANT", "default_tenant")
-            database = os.getenv("CHROMADB_DATABASE", "default_database")
+            tenant = os.getenv("CHROMADB_TENANT")
+            database = os.getenv("CHROMADB_DATABASE")
 
-            if not cloud_url or not api_key:
+            if not api_key or not tenant or not database:
                 logger.warning(f"[{self.nlm_id}] ChromaDB Cloud credentials missing, falling back to local")
                 chroma_mode = "local"
             else:
                 logger.info(f"[{self.nlm_id}] Connecting to ChromaDB Cloud...")
-                self.vector_db = chromadb.HttpClient(
-                    host=cloud_url,
-                    port=443,
-                    ssl=True,
-                    headers={
-                        "Authorization": f"Bearer {api_key}"
-                    },
+                logger.info(f"[{self.nlm_id}] Tenant: {tenant}, Database: {database}")
+
+                # Use CloudClient for ChromaDB 1.3.0+
+                self.vector_db = chromadb.CloudClient(
+                    api_key=api_key,
                     tenant=tenant,
                     database=database
                 )
