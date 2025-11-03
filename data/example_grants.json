@@ -1,0 +1,70 @@
+[
+  {
+    "grant_id": "IUK_SMART_001",
+    "title": "Smart Grant: AI for Healthcare Diagnostics",
+    "description": "Develop AI-powered diagnostic tools for early disease detection. Funding for innovative SMEs working on machine learning applications in healthcare. Must demonstrate technical feasibility and market potential.",
+    "amount_min": 25000,
+    "amount_max": 2000000,
+    "deadline": "2025-06-30",
+    "sectors": ["AI & Data", "Healthcare", "MedTech"],
+    "eligibility": "UK SME with <250 employees, innovative project, 30% grant funding",
+    "url": "https://apply-for-innovation-funding.service.gov.uk/competition/1234/overview",
+    "funding_body": "Innovate UK",
+    "competition_type": "Smart Grant",
+    "application_deadline": "2025-06-30T17:00:00Z"
+  },
+  {
+    "grant_id": "IUK_SMART_002",
+    "title": "Smart Grant: Clean Energy Storage Solutions",
+    "description": "Innovative energy storage technologies for renewable energy systems. Seeking projects that address grid-scale storage challenges with novel battery chemistry or mechanical storage systems.",
+    "amount_min": 100000,
+    "amount_max": 2000000,
+    "deadline": "2025-07-15",
+    "sectors": ["Clean Energy", "Sustainability", "Advanced Materials"],
+    "eligibility": "UK registered company, demonstrable innovation, commercial potential",
+    "url": "https://apply-for-innovation-funding.service.gov.uk/competition/1235/overview",
+    "funding_body": "Innovate UK",
+    "competition_type": "Smart Grant"
+  },
+  {
+    "grant_id": "NIHR_AI_001",
+    "title": "NIHR AI for Health and Care Award",
+    "description": "Artificial intelligence and data-driven research to transform health and social care. Projects must demonstrate clear pathway to NHS implementation and patient benefit.",
+    "amount_min": 50000,
+    "amount_max": 1000000,
+    "deadline": "2025-08-20",
+    "sectors": ["Healthcare", "AI & Data", "Digital Health"],
+    "eligibility": "NHS partnership required, ethical approval needed, patient involvement",
+    "url": "https://www.nihr.ac.uk/funding/ai-for-health-and-care-award/12345",
+    "funding_body": "NIHR",
+    "research_type": "Applied health research"
+  },
+  {
+    "grant_id": "HE_EIC_001",
+    "title": "EIC Accelerator: Deep Tech Innovation",
+    "description": "EU funding for breakthrough innovations with global market potential. Open to high-risk, high-impact deep tech projects in any sector. Mix of grant (€2.5M) and equity (€15M).",
+    "amount_min": 500000,
+    "amount_max": 17500000,
+    "deadline": "2025-09-10",
+    "sectors": ["Deep Tech", "AI & Data", "Advanced Materials", "CleanTech"],
+    "eligibility": "SME from EU or associated countries, TRL 5-8, disruptive innovation",
+    "url": "https://eic.ec.europa.eu/eic-funding-opportunities/eic-accelerator_en",
+    "funding_body": "European Innovation Council",
+    "programme": "Horizon Europe",
+    "funding_type": "Blended (grant + equity)"
+  },
+  {
+    "grant_id": "IUK_SBRI_001",
+    "title": "SBRI: NHS Digital Solutions",
+    "description": "Small Business Research Initiative competition for innovative digital health solutions. Phase 1: Feasibility (£100k, 6 months). Phase 2: Development (£1M, 24 months).",
+    "amount_min": 100000,
+    "amount_max": 1000000,
+    "deadline": "2025-05-15",
+    "sectors": ["Digital Health", "Healthcare", "Software"],
+    "eligibility": "Any UK business, novel solution to NHS challenge, rapid development",
+    "url": "https://sbri.innovateuk.org/competitions/nhs-digital-health",
+    "funding_body": "Innovate UK",
+    "competition_type": "SBRI",
+    "phases": "Phase 1: £100k, Phase 2: £1M"
+  }
+]
