@@ -474,6 +474,7 @@
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
+        let conversationHistory = [];
 
         // Add user message to chat
         function addUserMessage(text) {
@@ -654,6 +655,138 @@
             return html;
         }
 
+        // Format AI-powered response with analysis and grants
+        function formatAIResponse(data) {
+            const grantCount = data.grants?.length || 0;
+            const nlmCount = data.nlms_queried?.length || 0;
+            const aiPowered = data.ai_powered || false;
+
+            let html = `
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-value">${data.total_results || grantCount}</span> grants found
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${nlmCount}</span> funding bodies searched
+                    </div>
+                    <div class="stat-item">
+                        ⚡ <span class="stat-value">${data.processing_time_ms?.toFixed(0) || 0}ms</span>
+                    </div>
+                    ${aiPowered ? '<div class="stat-item">🤖 AI Analysis</div>' : ''}
+                </div>
+            `;
+
+            // Show AI response if available
+            if (data.response) {
+                html += `
+                    <div class="context-info" style="margin-top: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                        <strong style="font-size: 14px;">🧠 AI Grant Analyst:</strong>
+                        <div style="margin-top: 10px; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(data.response)}</div>
+                    </div>
+                `;
+            }
+
+            if (grantCount === 0) {
+                html += `
+                    <div class="context-info" style="margin-top: 15px;">
+                        <p><strong>😕 No grants found matching your query.</strong></p>
+                        <p style="margin-top: 10px;">Try:</p>
+                        <ul style="margin-left: 20px; margin-top: 8px;">
+                            <li>Using different keywords</li>
+                            <li>Broadening your search terms</li>
+                            <li>Asking about specific sectors or funding types</li>
+                        </ul>
+                    </div>
+                `;
+                return html;
+            }
+
+            // Show grants
+            data.grants.forEach((grant, index) => {
+                const grantId = `grant-${Date.now()}-${index}`;
+                const amount = formatAmount(grant);
+                const relevanceScore = ((grant.relevance_score || 0) * 100).toFixed(0);
+
+                html += `
+                    <div class="grant-card">
+                        <div class="grant-header">
+                            <h3>${escapeHtml(grant.title || 'Untitled Grant')}</h3>
+                            <div class="relevance-badge">${relevanceScore}% Match</div>
+                        </div>
+
+                        <p>${escapeHtml(truncateText(grant.description, 250))}</p>
+
+                        <div class="grant-meta">
+                            <div class="meta-item">
+                                <span>💰</span>
+                                <span class="amount">${amount}</span>
+                            </div>
+                            ${grant.deadline ? `
+                                <div class="meta-item">
+                                    <span>📅</span>
+                                    <span class="deadline">${escapeHtml(grant.deadline)}</span>
+                                </div>
+                            ` : ''}
+                            <div class="meta-item">
+                                <span>🏛️</span>
+                                <span>${escapeHtml(grant.funding_body || grant.domain || 'Unknown')}</span>
+                            </div>
+                            ${grant.match_funding_required ? `
+                                <div class="meta-item">
+                                    <span>🤝</span>
+                                    <span>Match funding required</span>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        ${(grant.eligibility || grant.scope || grant.application_process) ? `
+                            <button class="expand-button" id="btn-${grantId}" onclick="toggleDetails('${grantId}')">
+                                ▼ Show Details
+                            </button>
+
+                            <div class="expanded-details" id="details-${grantId}">
+                                ${grant.eligibility ? `
+                                    <div class="grant-section">
+                                        <div class="grant-section-title">✅ Eligibility</div>
+                                        <div class="grant-section-content">${escapeHtml(truncateText(grant.eligibility, 300))}</div>
+                                    </div>
+                                ` : ''}
+
+                                ${grant.scope ? `
+                                    <div class="grant-section">
+                                        <div class="grant-section-title">🎯 Scope</div>
+                                        <div class="grant-section-content">${escapeHtml(truncateText(grant.scope, 300))}</div>
+                                    </div>
+                                ` : ''}
+
+                                ${grant.application_process ? `
+                                    <div class="grant-section">
+                                        <div class="grant-section-title">📋 How to Apply</div>
+                                        <div class="grant-section-content">${escapeHtml(truncateText(grant.application_process, 300))}</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+
+                        <div class="grant-actions">
+                            ${grant.source_url ? `
+                                <a href="${escapeHtml(grant.source_url)}" target="_blank" class="action-button">
+                                    View Full Details
+                                </a>
+                            ` : ''}
+                            ${grant.application_url ? `
+                                <a href="${escapeHtml(grant.application_url)}" target="_blank" class="action-button">
+                                    Apply Now
+                                </a>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            return html;
+        }
+
         // Truncate text to specified length
         function truncateText(text, maxLength) {
             if (!text) return '';
@@ -698,14 +831,16 @@
             sendButton.disabled = true;
 
             try {
-                const response = await fetch(`${API_URL}/api/query`, {
+                // Use AI chat endpoint for intelligent responses
+                const response = await fetch(`${API_URL}/api/ai/chat`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
                         query: query,
-                        max_results: 10
+                        max_results: 10,
+                        conversation_history: conversationHistory
                     })
                 });
 
@@ -717,7 +852,23 @@
 
                 const data = await response.json();
                 console.log('API Response:', data); // Debug
-                const formattedResponse = formatGrants(data);
+
+                // Add AI response to conversation history
+                conversationHistory.push({
+                    role: 'user',
+                    content: query
+                });
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: data.response || ''
+                });
+
+                // Keep only last 6 messages (3 exchanges)
+                if (conversationHistory.length > 6) {
+                    conversationHistory = conversationHistory.slice(-6);
+                }
+
+                const formattedResponse = formatAIResponse(data);
                 addBotMessage(formattedResponse);
 
             } catch (error) {
