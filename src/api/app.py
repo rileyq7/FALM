@@ -22,6 +22,14 @@ from ..utils.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Import AI endpoints
+try:
+    from .ai_endpoints import router as ai_router
+    AI_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"AI endpoints not available: {e}")
+    AI_AVAILABLE = False
+
 # Global instances
 orchestrator: Optional[Orchestrator] = None
 engagement_tracker: Optional[EngagementTracker] = None
@@ -93,6 +101,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include AI router if available
+if AI_AVAILABLE:
+    app.include_router(ai_router)
+    logger.info("AI-powered endpoints enabled")
 
 
 # ============================================================================
