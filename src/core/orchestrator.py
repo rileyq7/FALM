@@ -60,7 +60,7 @@ class KeywordRoutingStrategy(RoutingStrategy):
     """Route based on keywords in query"""
 
     DOMAIN_KEYWORDS = {
-        "innovate_uk": ["innovate uk", "iuk", "smart grant", "cr&d"],
+        "innovate_uk": ["innovate uk", "iuk", "cr&d"],
         "horizon_europe": ["horizon", "eic", "european", "eu funding"],
         "nihr": ["nihr", "health research", "clinical"],
         "ukri": ["ukri", "research council", "epsrc", "esrc", "nerc"]

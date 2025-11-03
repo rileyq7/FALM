@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FALM Grant Finder - Chat Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            line-height: 1.5;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .grant-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .grant-card h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .grant-card p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .grant-card .amount {
+            font-weight: bold;
+            color: #28a745;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .grant-card .deadline {
+            color: #dc3545;
+            font-weight: 500;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 18px;
+            max-width: 70px;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-indicator span {
+            height: 10px;
+            width: 10px;
+            background: #667eea;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .suggestions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .suggestion-chip {
+            padding: 8px 15px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggestion-chip:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .context-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1976d2;
+        }
+
+        .error-message {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🚀 FALM Grant Finder</h1>
+            <p>Ask me anything about grants - I search across InnovateUK, Horizon Europe, NIHR, and UKRI</p>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-content">
+                    <p>👋 Hi! I'm your grant discovery assistant. I can help you find funding opportunities across multiple UK and EU funding bodies.</p>
+                    <div class="suggestions">
+                        <div class="suggestion-chip" onclick="sendSuggestion('Show me AI grants for startups')">AI grants for startups</div>
+                        <div class="suggestion-chip" onclick="sendSuggestion('Clean energy innovation funding')">Clean energy funding</div>
+                        <div class="suggestion-chip" onclick="sendSuggestion('Healthcare research grants')">Healthcare research</div>
+                        <div class="suggestion-chip" onclick="sendSuggestion('What grants are available for SMEs?')">SME grants</div>
+                    </div>
+                    <p style="margin-top: 15px; font-size: 13px; color: #666;">💡 Try asking: "Find me grants for AI in healthcare" or "What funding is available for quantum computing?"</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <form class="chat-input-form" id="chatForm">
+                <input
+                    type="text"
+                    class="chat-input"
+                    id="chatInput"
+                    placeholder="Ask about grants... (e.g., 'Find me AI funding for startups')"
+                    autocomplete="off"
+                >
+                <button type="submit" class="send-button" id="sendButton">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+
+        // Add user message to chat
+        function addUserMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message user';
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <p>${escapeHtml(text)}</p>
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // Add bot message to chat
+        function addBotMessage(content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // Show typing indicator
+        function showTyping() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-indicator active">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        // Remove typing indicator
+        function hideTyping() {
+            const typingDiv = document.getElementById('typingIndicator');
+            if (typingDiv) typingDiv.remove();
+        }
+
+        // Format grant results as HTML
+        function formatGrants(data) {
+            let html = `<p><strong>Found ${data.total_results} grants</strong> across ${data.nlms_queried.length} funding bodies</p>`;
+
+            if (data.sme_context) {
+                html += `<div class="context-info">💡 ${escapeHtml(data.sme_context)}</div>`;
+            }
+
+            if (data.grants && data.grants.length > 0) {
+                data.grants.forEach(grant => {
+                    const amount = formatAmount(grant);
+                    const deadline = grant.deadline || 'No deadline specified';
+
+                    html += `
+                        <div class="grant-card">
+                            <h3>${escapeHtml(grant.title)}</h3>
+                            <p>${escapeHtml(grant.description)}</p>
+                            <p><strong>Domain:</strong> ${escapeHtml(grant.domain)}</p>
+                            <p class="amount">💰 ${amount}</p>
+                            <p class="deadline">📅 Deadline: ${deadline}</p>
+                            ${grant.application_url ? `<p><a href="${grant.application_url}" target="_blank" style="color: #667eea;">Apply here →</a></p>` : ''}
+                        </div>
+                    `;
+                });
+            } else {
+                html += `<p style="margin-top: 10px;">😕 No grants found matching your query. Try different keywords!</p>`;
+            }
+
+            html += `<p style="margin-top: 15px; font-size: 13px; color: #666;">⚡ Search completed in ${data.processing_time_ms?.toFixed(0) || 0}ms</p>`;
+
+            return html;
+        }
+
+        // Format grant amount
+        function formatAmount(grant) {
+            const currency = grant.currency || 'GBP';
+            const symbol = currency === 'EUR' ? '€' : '£';
+
+            if (grant.amount_min && grant.amount_max) {
+                return `${symbol}${grant.amount_min.toLocaleString()} - ${symbol}${grant.amount_max.toLocaleString()}`;
+            } else if (grant.amount_max) {
+                return `Up to ${symbol}${grant.amount_max.toLocaleString()}`;
+            }
+            return 'Amount not specified';
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Scroll to bottom of chat
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Send message to API
+        async function sendMessage(query) {
+            addUserMessage(query);
+            showTyping();
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/api/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        max_results: 10
+                    })
+                });
+
+                hideTyping();
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const formattedResponse = formatGrants(data);
+                addBotMessage(formattedResponse);
+
+            } catch (error) {
+                hideTyping();
+                console.error('Error:', error);
+                addBotMessage(`
+                    <div class="error-message">
+                        ❌ Oops! I couldn't connect to the grant database.
+                        <br><br>
+                        <strong>Make sure:</strong>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>The FALM server is running (python main.py)</li>
+                            <li>It's accessible at ${API_URL}</li>
+                        </ul>
+                        <br>
+                        Error: ${escapeHtml(error.message)}
+                    </div>
+                `);
+            } finally {
+                sendButton.disabled = false;
+                chatInput.focus();
+            }
+        }
+
+        // Handle suggestion clicks
+        function sendSuggestion(text) {
+            chatInput.value = text;
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+
+        // Handle form submission
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = chatInput.value.trim();
+
+            if (query) {
+                sendMessage(query);
+                chatInput.value = '';
+            }
+        });
+
+        // Focus input on load
+        window.addEventListener('load', () => {
+            chatInput.focus();
+        });
+    </script>
+</body>
+</html>
