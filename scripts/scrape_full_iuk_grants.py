@@ -61,6 +61,31 @@ class IUKGrantScraper:
             "sections": {}
         }
 
+        # Extract competition title from the main page
+        try:
+            async with session.get(url, timeout=30) as response:
+                if response.status == 200:
+                    html = await response.text()
+                    soup = BeautifulSoup(html, 'html.parser')
+
+                    # Try to get title from h1 tag first
+                    h1_tag = soup.find('h1')
+                    if h1_tag:
+                        title_text = h1_tag.get_text(separator=' ', strip=True)
+                        # Remove "Funding competition" prefix if present
+                        title_text = re.sub(r'^Funding\s*competition\s*', '', title_text, flags=re.IGNORECASE).strip()
+                        grant_data["page_title"] = title_text
+                    else:
+                        # Fallback to HTML title tag
+                        title_tag = soup.find('title')
+                        if title_tag:
+                            title_text = title_tag.get_text(strip=True).split('|')[0].strip()
+                            # Remove "Funding competition" prefix if present
+                            title_text = re.sub(r'^Funding\s*competition\s*', '', title_text, flags=re.IGNORECASE).strip()
+                            grant_data["page_title"] = title_text
+        except Exception as e:
+            print(f"  ⚠️  Could not extract page title: {str(e)[:50]}")
+
         # Scrape each section
         for section in self.sections:
             section_data = await self._scrape_section(session, url, section)
@@ -69,7 +94,13 @@ class IUKGrantScraper:
                 print(f"  ✓ {section}")
 
         # Extract structured data from sections
-        grant_data.update(self._extract_structured_data(grant_data["sections"]))
+        structured_data = self._extract_structured_data(grant_data["sections"])
+
+        # Override title with page_title if available
+        if grant_data.get("page_title"):
+            structured_data["title"] = grant_data["page_title"]
+
+        grant_data.update(structured_data)
 
         return grant_data
 
